@@ -246,9 +246,4 @@ The compiled library will be in `target/debug/libgodot_ksni.so` or `target/relea
 
 ## License
 
-This project is dual-licensed under either:
-
-- MIT License
-- Apache License 2.0
-
-at your option.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
