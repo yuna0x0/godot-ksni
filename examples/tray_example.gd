@@ -89,7 +89,7 @@ func _on_menu_activated(id: String):
 		"about":
 			print("Show about dialog")
 		"documentation":
-			OS.shell_open("https://github.com/your-repo/godot-ksni")
+			OS.shell_open("https://github.com/yuna0x0/godot-ksni")
 		"quit":
 			get_tree().quit()
 
