@@ -28,7 +28,9 @@ This library currently supports Linux desktop environments that implement the St
 
 ## Installation
 
-### Method 1: As a Git Submodule
+### Method 1: As a Standalone GDExtension
+
+Use this method if you want to add godot-ksni as a separate GDExtension to your Godot project.
 
 1. Add godot-ksni as a submodule to your project:
 
@@ -37,7 +39,7 @@ git submodule add https://github.com/yuna0x0/godot-ksni.git
 git submodule update --init --recursive
 ```
 
-2. Build the library:
+2. Build the library with default features (includes `gdextension` feature):
 
 ```bash
 cd godot-ksni
@@ -77,18 +79,33 @@ linux.release.x86_64 = "res://../godot-ksni/target/release/libgodot_ksni.so"
 
 5. The `TrayIcon` node will be available in your Godot project.
 
-### Method 2: As a Rust Dependency
+### Method 2: As a Rust Dependency (for GDExtension developers)
 
-If you are building your own Godot Rust extension, you can include godot-ksni as a dependency.
+Use this method if you're building your own Rust GDExtension and want to include godot-ksni's functionality within it.
 
-1. Add to your `Cargo.toml`:
+1. Add godot-ksni as a dependency with default features disabled:
 
-```toml
-[dependencies]
-godot-ksni = { path = "../godot-ksni" }
+```bash
+cargo add godot-ksni --no-default-features
 ```
 
-2. The `TrayIcon` node will be automatically registered when your extension loads.
+**Important**: You must disable default features with `--no-default-features` to prevent duplicate `gdext_rust_init` symbols. The `gdextension` feature (enabled by default) is only needed when building godot-ksni as its own standalone GDExtension (Method 1).
+
+2. In your `lib.rs`, re-export the `TrayIcon` to ensure it gets linked:
+
+```rust
+use godot::prelude::*;
+
+// Re-export TrayIcon so it's registered with Godot
+pub use godot_ksni::TrayIcon;
+
+struct MyExtension;
+
+#[gdextension]
+unsafe impl ExtensionLibrary for MyExtension {}
+```
+
+3. The `TrayIcon` node will be automatically registered when your extension loads.
 
 ## Quick Start
 

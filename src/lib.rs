@@ -11,43 +11,56 @@
 //!
 //! ## Usage
 //!
-//! ### As a GDExtension (Submodule)
+//! ### Method 1: As a Standalone GDExtension
+//!
+//! Use this method if you want to add godot-ksni as a separate GDExtension to your Godot project.
 //!
 //! 1. Add godot-ksni as a git submodule to your project
-//! 2. Build the library: `cd godot-ksni && cargo build --release`
-//! 3. Create the following `GodotKsni.gdextension` file in your Godot project:
-//! ```gdextension
-//! [configuration]
-//! entry_symbol = "gdext_rust_init"
-//! compatibility_minimum = 4.5
-//! reloadable = true
+//! 2. Build the library with default features (includes `gdextension` feature):
+//!    ```bash
+//!    cd godot-ksni && cargo build --release
+//!    ```
+//! 3. Create a `GodotKsni.gdextension` file in your Godot project directory:
+//!    ```gdextension
+//!    [configuration]
+//!    entry_symbol = "gdext_rust_init"
+//!    compatibility_minimum = 4.5
+//!    reloadable = true
 //!
-//! [libraries]
-//! linux.debug.x86_64 = "res://../godot-ksni/target/debug/libgodot_ksni.so"
-//! linux.release.x86_64 = "res://../godot-ksni/target/release/libgodot_ksni.so"
-//! ```
+//!    [libraries]
+//!    linux.debug.x86_64 = "res://../godot-ksni/target/debug/libgodot_ksni.so"
+//!    linux.release.x86_64 = "res://../godot-ksni/target/release/libgodot_ksni.so"
+//!    ```
 //!
-//! 4. Use the `TrayIcon` node in your scripts
+//! 4. The `TrayIcon` node will be available in your Godot project
 //!
-//! ### As a Rust Dependency
+//! ### Method 2: As a Rust Dependency (for GDExtension developers)
 //!
-//! Add to your `Cargo.toml`:
-//! ```toml
-//! [dependencies]
-//! godot-ksni = { path = "../godot-ksni" }
-//! ```
+//! Use this method if you're building your own Rust GDExtension and want to include
+//! godot-ksni's functionality within it.
 //!
-//! Then in your `lib.rs`:
-//! ```rust,ignore
-//! use godot::prelude::*;
+//! 1. Add godot-ksni as a dependency with default features disabled:
+//!    ```bash
+//!    cargo add godot-ksni --no-default-features
+//!    ```
 //!
-//! struct MyExtension;
+//!    **Important**: You must disable default features to prevent duplicate `gdext_rust_init`
+//!    symbols. The `gdextension` feature is only needed when building as a standalone library.
 //!
-//! #[gdextension]
-//! unsafe impl ExtensionLibrary for MyExtension {}
-//! ```
+//! 2. In your `lib.rs`, re-export `TrayIcon` to ensure it gets linked:
+//!    ```rust,ignore
+//!    use godot::prelude::*;
 //!
-//! The `TrayIcon` node will be automatically available in Godot.
+//!    // Re-export TrayIcon so it's registered with Godot
+//!    pub use godot_ksni::TrayIcon;
+//!
+//!    struct MyExtension;
+//!
+//!    #[gdextension]
+//!    unsafe impl ExtensionLibrary for MyExtension {}
+//!    ```
+//!
+//! 3. The `TrayIcon` node will be automatically registered when your extension loads
 //!
 //! ## Example
 //!
@@ -1111,7 +1124,12 @@ impl TrayIcon {
     }
 }
 
-struct GodotKsniExtension;
+#[cfg(feature = "gdextension")]
+mod gdextension {
+    use super::*;
 
-#[gdextension]
-unsafe impl ExtensionLibrary for GodotKsniExtension {}
+    struct GodotKsniExtension;
+
+    #[gdextension]
+    unsafe impl ExtensionLibrary for GodotKsniExtension {}
+}
