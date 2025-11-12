@@ -125,7 +125,7 @@ func _ready():
     # Configure the tray
     tray_icon.set_tray_id("my_application")
     tray_icon.set_title("My Application")
-    tray_icon.set_icon_from_path("res://icon.png")
+    tray_icon.set_icon_from_path("res://icon.svg")
     tray_icon.set_tooltip("My App", "Running in background", "")
 
     # Build menu
@@ -155,16 +155,16 @@ func _on_menu_activated(id: String):
 tray_icon.set_icon_name("application-x-executable")
 
 # Method 2: From resource path (recommended for custom icons)
-if tray_icon.set_icon_from_path("res://icon.png"):
+if tray_icon.set_icon_from_path("res://icon.svg"):
     print("Icon loaded")
 
 # Method 3: From texture resource
-var texture = load("res://icon.png")
+var texture = load("res://icon.svg")
 if texture:
     tray_icon.set_icon_from_texture(texture)
 
 # Method 4: From image (for image manipulation)
-var texture = load("res://icon.png")
+var texture = load("res://icon.svg")
 if texture:
     var image = texture.get_image()
     tray_icon.set_icon_from_image(image)
@@ -239,7 +239,7 @@ The compiled library will be in `target/debug/libgodot_ksni.so` or `target/relea
 ### Icon not loading
 
 - Verify the icon path is correct (use `res://` for Godot resources)
-- Ensure the image format is supported (PNG, JPG recommended)
+- Ensure the image format is supported by Godot (PNG, SVG, etc.)
 - Fall back to system icon names if custom icons fail
 
 ## License

@@ -11,19 +11,19 @@ func _ready():
 	tray_icon.set_title("My Application")
 
 	# Method 1: Load from resource path
-	if tray_icon.set_icon_from_path("res://icon.png"):
+	if tray_icon.set_icon_from_path("res://icon.svg"):
 		print("Icon loaded successfully")
 	else:
 		tray_icon.set_icon_name("application-x-executable")
 		print("Using fallback icon")
 
 	# Method 2: Load from Texture2D
-	# var texture = load("res://icon.png")
+	# var texture = load("res://icon.svg")
 	# if texture:
 	#     tray_icon.set_icon_from_texture(texture)
 
 	# Method 3: Load from Image
-	# var texture = load("res://icon.png")
+	# var texture = load("res://icon.svg")
 	# if texture:
 	#     var image = texture.get_image()
 	#     tray_icon.set_icon_from_image(image)

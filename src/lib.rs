@@ -75,7 +75,7 @@
 //!
 //!     tray_icon.set_tray_id("my_app")
 //!     tray_icon.set_title("My Application")
-//!     tray_icon.set_icon_from_path("res://icon.png")
+//!     tray_icon.set_icon_from_path("res://icon.svg")
 //!
 //!     tray_icon.add_menu_item("quit", "Quit", "application-exit", true, true)
 //!
@@ -419,7 +419,7 @@ impl ksni::Tray for KsniTray {
 /// var tray = TrayIcon.new()
 /// add_child(tray)
 /// tray.set_tray_id("my_app")
-/// tray.set_icon_from_path("res://icon.png")
+/// tray.set_icon_from_path("res://icon.svg")
 /// tray.menu_activated.connect(_on_menu_activated)
 /// tray.spawn_tray()
 /// ```
@@ -601,7 +601,7 @@ impl TrayIcon {
     ///
     /// # Example (GDScript)
     /// ```gdscript
-    /// var texture = load("res://icon.png")
+    /// var texture = load("res://icon.svg")
     /// var image = texture.get_image()
     /// tray_icon.set_icon_from_image(image)
     /// ```
@@ -662,7 +662,7 @@ impl TrayIcon {
     ///
     /// # Example (GDScript)
     /// ```gdscript
-    /// var texture = load("res://icon.png")
+    /// var texture = load("res://icon.svg")
     /// tray_icon.set_icon_from_texture(texture)
     /// ```
     #[func]
@@ -683,14 +683,14 @@ impl TrayIcon {
     /// Works with exported games because it uses ResourceLoader.
     ///
     /// # Parameters
-    /// * `path` - A Godot resource path (e.g., "res://icon.png")
+    /// * `path` - A Godot resource path (e.g., "res://icon.svg")
     ///
     /// # Returns
     /// `true` if the icon was loaded and set successfully, `false` otherwise
     ///
     /// # Example (GDScript)
     /// ```gdscript
-    /// tray_icon.set_icon_from_path("res://icon.png")
+    /// tray_icon.set_icon_from_path("res://icon.svg")
     /// ```
     #[func]
     fn set_icon_from_path(&mut self, path: GString) -> bool {
