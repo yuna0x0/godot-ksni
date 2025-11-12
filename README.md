@@ -6,7 +6,7 @@ A Godot 4 GDExtension that provides system tray icon functionality for Linux des
 
 godot-ksni wraps the [iovxw/ksni](https://github.com/iovxw/ksni) Rust library to bring native system tray support to Godot 4 projects on Linux. It exposes a `TrayIcon` node that can be used to create tray icons with menus, checkboxes, radio buttons, submenus, and custom icons.
 
-![godot-ksni Tray Screenshot](assets/tray_screenshot.webp)
+<img src="assets/tray_screenshot.webp" alt="godot-ksni Tray Screenshot" width="300">
 
 ## Features
 
