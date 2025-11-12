@@ -1,3 +1,79 @@
+//! # godot-ksni
+//!
+//! A Godot 4 GDExtension that provides system tray icon functionality for Linux desktop environments
+//! using the StatusNotifierItem (SNI) specification via the [ksni](https://crates.io/crates/ksni) library.
+//!
+//! ## Overview
+//!
+//! This library exposes a `TrayIcon` node that can be used in Godot projects to create system tray icons
+//! with menus, tooltips, and custom icons. It supports standard menu items, checkboxes, radio buttons,
+//! submenus, and separators.
+//!
+//! ## Usage
+//!
+//! ### As a GDExtension (Submodule)
+//!
+//! 1. Add godot-ksni as a git submodule to your project
+//! 2. Build the library: `cd godot-ksni && cargo build --release`
+//! 3. Create the following `GodotKsni.gdextension` file in your Godot project:
+//! ```gdextension
+//! [configuration]
+//! entry_symbol = "gdext_rust_init"
+//! compatibility_minimum = 4.5
+//! reloadable = true
+//!
+//! [libraries]
+//! linux.debug.x86_64 = "res://../godot-ksni/target/debug/libgodot_ksni.so"
+//! linux.release.x86_64 = "res://../godot-ksni/target/release/libgodot_ksni.so"
+//! ```
+//!
+//! 4. Use the `TrayIcon` node in your scripts
+//!
+//! ### As a Rust Dependency
+//!
+//! Add to your `Cargo.toml`:
+//! ```toml
+//! [dependencies]
+//! godot-ksni = { path = "../godot-ksni" }
+//! ```
+//!
+//! Then in your `lib.rs`:
+//! ```rust,ignore
+//! use godot::prelude::*;
+//!
+//! struct MyExtension;
+//!
+//! #[gdextension]
+//! unsafe impl ExtensionLibrary for MyExtension {}
+//! ```
+//!
+//! The `TrayIcon` node will be automatically available in Godot.
+//!
+//! ## Example
+//!
+//! ```gdscript
+//! extends Node
+//!
+//! var tray_icon: TrayIcon
+//!
+//! func _ready():
+//!     tray_icon = TrayIcon.new()
+//!     add_child(tray_icon)
+//!
+//!     tray_icon.set_tray_id("my_app")
+//!     tray_icon.set_title("My Application")
+//!     tray_icon.set_icon_from_path("res://icon.png")
+//!
+//!     tray_icon.add_menu_item("quit", "Quit", "application-exit", true, true)
+//!
+//!     tray_icon.menu_activated.connect(_on_menu_activated)
+//!     tray_icon.spawn_tray()
+//!
+//! func _on_menu_activated(id: String):
+//!     if id == "quit":
+//!         get_tree().quit()
+//! ```
+
 use godot::classes::{Image, ResourceLoader, Texture2D};
 use godot::prelude::*;
 use ksni::blocking::TrayMethods;
@@ -313,6 +389,27 @@ impl ksni::Tray for KsniTray {
 
 #[derive(GodotClass)]
 #[class(base=Node)]
+/// A Godot node that provides system tray icon functionality for Linux.
+///
+/// `TrayIcon` creates and manages a system tray icon using the StatusNotifierItem specification.
+/// It supports custom icons, menus with various item types, and signals for user interactions.
+///
+/// # Signals
+///
+/// - `menu_activated(id: String)` - Emitted when a standard menu item is clicked
+/// - `checkmark_toggled(id: String, checked: bool)` - Emitted when a checkmark item is toggled
+/// - `radio_selected(group_id: String, index: int, option_id: String)` - Emitted when a radio option is selected
+///
+/// # Example
+///
+/// ```gdscript
+/// var tray = TrayIcon.new()
+/// add_child(tray)
+/// tray.set_tray_id("my_app")
+/// tray.set_icon_from_path("res://icon.png")
+/// tray.menu_activated.connect(_on_menu_activated)
+/// tray.spawn_tray()
+/// ```
 pub struct TrayIcon {
     base: Base<Node>,
     handle: Option<ksni::blocking::Handle<KsniTray>>,
@@ -383,6 +480,23 @@ impl TrayIcon {
     #[signal]
     fn radio_selected(group_id: GString, index: i64, option_id: GString);
 
+    /// Spawns the system tray icon.
+    ///
+    /// This method must be called after configuring the tray icon to make it visible in the system tray.
+    /// It should only be called once. Subsequent calls will be ignored and return false.
+    ///
+    /// # Returns
+    ///
+    /// Returns `true` if the tray was successfully spawned, `false` if it was already spawned or if an error occurred.
+    ///
+    /// # Example
+    ///
+    /// ```gdscript
+    /// if tray_icon.spawn_tray():
+    ///     print("Tray icon created successfully")
+    /// else:
+    ///     print("Failed to create tray icon")
+    /// ```
     #[func]
     fn spawn_tray(&mut self) -> bool {
         if self.handle.is_some() {
@@ -413,6 +527,10 @@ impl TrayIcon {
         }
     }
 
+    /// Updates the tray icon to reflect changes made to its state.
+    ///
+    /// This method is automatically called when checkmarks or radio buttons are toggled.
+    /// Manual calls are rarely needed.
     #[func]
     fn update_tray(&mut self) {
         if let Some(handle) = &self.handle {
@@ -420,18 +538,40 @@ impl TrayIcon {
         }
     }
 
+    /// Sets the unique identifier for this tray icon.
+    ///
+    /// The ID is used by the system to identify this tray icon. It should be unique per application.
+    ///
+    /// # Parameters
+    ///
+    /// - `tray_id` - A unique identifier string (e.g., "com.example.myapp")
     #[func]
     fn set_tray_id(&mut self, tray_id: GString) {
         let mut state = self.state.lock().unwrap();
         state.tray_id = tray_id.to_string();
     }
 
+    /// Sets the tray icon using a system icon name.
+    ///
+    /// Uses the freedesktop icon naming specification. Common names include:
+    /// - "application-x-executable"
+    /// - "applications-games"
+    /// - "help-about"
+    ///
+    /// # Parameters
+    ///
+    /// - `icon_name` - The name of the system icon to use
     #[func]
     fn set_icon_name(&mut self, icon_name: GString) {
         let mut state = self.state.lock().unwrap();
         state.icon_name = icon_name.to_string();
     }
 
+    /// Sets the path to search for icon themes.
+    ///
+    /// # Parameters
+    ///
+    /// - `path` - The filesystem path to the icon theme directory
     #[func]
     fn set_icon_theme_path(&mut self, path: GString) {
         let mut state = self.state.lock().unwrap();
@@ -588,12 +728,24 @@ impl TrayIcon {
         state.icon_pixmap.clear();
     }
 
+    /// Sets the title text displayed next to the tray icon.
+    ///
+    /// # Parameters
+    ///
+    /// - `title` - The title text to display
     #[func]
     fn set_title(&mut self, title: GString) {
         let mut state = self.state.lock().unwrap();
         state.title = title.to_string();
     }
 
+    /// Sets the tooltip displayed when hovering over the tray icon.
+    ///
+    /// # Parameters
+    ///
+    /// - `title` - The main tooltip text
+    /// - `subtitle` - Additional tooltip text displayed below the title
+    /// - `icon_name` - System icon name to display in the tooltip
     #[func]
     fn set_tooltip(&mut self, title: GString, subtitle: GString, icon_name: GString) {
         let mut state = self.state.lock().unwrap();
@@ -602,12 +754,26 @@ impl TrayIcon {
         state.tooltip_icon_name = icon_name.to_string();
     }
 
+    /// Clears all menu items from the tray menu.
+    ///
+    /// This is useful when rebuilding the menu from scratch.
     #[func]
     fn clear_menu(&mut self) {
         let mut state = self.state.lock().unwrap();
         state.menu.clear();
     }
 
+    /// Adds a standard clickable menu item.
+    ///
+    /// When clicked, emits the `menu_activated` signal with the item's ID.
+    ///
+    /// # Parameters
+    ///
+    /// - `id` - Unique identifier for this menu item
+    /// - `label` - Text displayed in the menu
+    /// - `icon_name` - System icon name (empty string for no icon)
+    /// - `enabled` - Whether the item can be clicked
+    /// - `visible` - Whether the item is visible
     #[func]
     fn add_menu_item(
         &mut self,
@@ -627,6 +793,18 @@ impl TrayIcon {
         });
     }
 
+    /// Adds a menu item with a checkmark that can be toggled.
+    ///
+    /// When toggled, emits the `checkmark_toggled` signal with the item's ID and new state.
+    ///
+    /// # Parameters
+    ///
+    /// - `id` - Unique identifier for this checkmark item
+    /// - `label` - Text displayed in the menu
+    /// - `icon_name` - System icon name (empty string for no icon)
+    /// - `checked` - Initial checked state
+    /// - `enabled` - Whether the item can be clicked
+    /// - `visible` - Whether the item is visible
     #[func]
     fn add_checkmark_item(
         &mut self,
@@ -648,6 +826,15 @@ impl TrayIcon {
         });
     }
 
+    /// Creates a new radio button group.
+    ///
+    /// Radio options must be added to this group using `add_radio_option`.
+    /// Only one option in a group can be selected at a time.
+    ///
+    /// # Parameters
+    ///
+    /// - `id` - Unique identifier for this radio group
+    /// - `selected` - Index of the initially selected option (0-based)
     #[func]
     fn add_radio_group(&mut self, id: GString, selected: i64) {
         let mut state = self.state.lock().unwrap();
@@ -658,6 +845,22 @@ impl TrayIcon {
         });
     }
 
+    /// Adds a radio button option to an existing radio group.
+    ///
+    /// When selected, emits the `radio_selected` signal with the group ID, option index, and option ID.
+    ///
+    /// # Parameters
+    ///
+    /// - `group_id` - ID of the radio group to add this option to
+    /// - `option_id` - Unique identifier for this option
+    /// - `label` - Text displayed in the menu
+    /// - `icon_name` - System icon name (empty string for no icon)
+    /// - `enabled` - Whether the option can be selected
+    /// - `visible` - Whether the option is visible
+    ///
+    /// # Returns
+    ///
+    /// Returns `true` if the option was added successfully, `false` if the group was not found.
     #[func]
     fn add_radio_option(
         &mut self,
@@ -688,12 +891,24 @@ impl TrayIcon {
         false
     }
 
+    /// Adds a visual separator line to the menu.
     #[func]
     fn add_separator(&mut self) {
         let mut state = self.state.lock().unwrap();
         state.menu.push(MenuItemData::Separator);
     }
 
+    /// Creates a submenu that can contain other menu items.
+    ///
+    /// After calling this, use `add_submenu_item`, `add_submenu_checkmark`, and `add_submenu_separator`
+    /// to add items to the submenu.
+    ///
+    /// # Parameters
+    ///
+    /// - `label` - Text displayed for the submenu
+    /// - `icon_name` - System icon name (empty string for no icon)
+    /// - `enabled` - Whether the submenu can be opened
+    /// - `visible` - Whether the submenu is visible
     #[func]
     fn begin_submenu(&mut self, label: GString, icon_name: GString, enabled: bool, visible: bool) {
         let mut state = self.state.lock().unwrap();
@@ -706,6 +921,20 @@ impl TrayIcon {
         });
     }
 
+    /// Adds a standard menu item to an existing submenu.
+    ///
+    /// # Parameters
+    ///
+    /// - `submenu_label` - Label of the parent submenu
+    /// - `id` - Unique identifier for this menu item
+    /// - `label` - Text displayed in the submenu
+    /// - `icon_name` - System icon name (empty string for no icon)
+    /// - `enabled` - Whether the item can be clicked
+    /// - `visible` - Whether the item is visible
+    ///
+    /// # Returns
+    ///
+    /// Returns `true` if the item was added successfully, `false` if the submenu was not found.
     #[func]
     fn add_submenu_item(
         &mut self,
@@ -740,6 +969,21 @@ impl TrayIcon {
         false
     }
 
+    /// Adds a checkmark item to an existing submenu.
+    ///
+    /// # Parameters
+    ///
+    /// - `submenu_label` - Label of the parent submenu
+    /// - `id` - Unique identifier for this checkmark item
+    /// - `label` - Text displayed in the submenu
+    /// - `icon_name` - System icon name (empty string for no icon)
+    /// - `checked` - Initial checked state
+    /// - `enabled` - Whether the item can be clicked
+    /// - `visible` - Whether the item is visible
+    ///
+    /// # Returns
+    ///
+    /// Returns `true` if the item was added successfully, `false` if the submenu was not found.
     #[func]
     fn add_submenu_checkmark(
         &mut self,
@@ -776,6 +1020,15 @@ impl TrayIcon {
         false
     }
 
+    /// Adds a separator to an existing submenu.
+    ///
+    /// # Parameters
+    ///
+    /// - `submenu_label` - Label of the parent submenu
+    ///
+    /// # Returns
+    ///
+    /// Returns `true` if the separator was added successfully, `false` if the submenu was not found.
     #[func]
     fn add_submenu_separator(&mut self, submenu_label: GString) -> bool {
         let mut state = self.state.lock().unwrap();
@@ -796,6 +1049,16 @@ impl TrayIcon {
         false
     }
 
+    /// Programmatically sets the state of a checkmark item.
+    ///
+    /// # Parameters
+    ///
+    /// - `id` - ID of the checkmark item to modify
+    /// - `checked` - New checked state
+    ///
+    /// # Returns
+    ///
+    /// Returns `true` if the checkmark was found and updated, `false` otherwise.
     #[func]
     fn set_checkmark_state(&mut self, id: GString, checked: bool) -> bool {
         let mut state = self.state.lock().unwrap();
@@ -816,6 +1079,16 @@ impl TrayIcon {
         false
     }
 
+    /// Programmatically selects a radio option in a radio group.
+    ///
+    /// # Parameters
+    ///
+    /// - `group_id` - ID of the radio group
+    /// - `index` - Index of the option to select (0-based)
+    ///
+    /// # Returns
+    ///
+    /// Returns `true` if the group was found and the selection was updated, `false` otherwise.
     #[func]
     fn set_radio_selected(&mut self, group_id: GString, index: i64) -> bool {
         let mut state = self.state.lock().unwrap();
