@@ -32,11 +32,14 @@ This library currently supports Linux desktop environments that implement the St
 
 Use this method if you want to add godot-ksni as a separate GDExtension to your Godot project.
 
-1. Add godot-ksni as a submodule to your project:
+1. Add godot-ksni as a submodule or clone to your project:
 
 ```bash
 git submodule add https://github.com/yuna0x0/godot-ksni.git
 git submodule update --init --recursive
+
+# Or clone directly
+git clone https://github.com/yuna0x0/godot-ksni.git
 ```
 
 2. Build the library with default features (includes `gdextension` feature):

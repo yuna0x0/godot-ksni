@@ -15,7 +15,7 @@
 //!
 //! Use this method if you want to add godot-ksni as a separate GDExtension to your Godot project.
 //!
-//! 1. Add godot-ksni as a git submodule to your project
+//! 1. Add godot-ksni as a git submodule or clone to your project
 //! 2. Build the library with default features (includes `gdextension` feature):
 //!    ```bash
 //!    cd godot-ksni && cargo build --release
