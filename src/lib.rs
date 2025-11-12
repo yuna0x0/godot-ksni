@@ -1,5 +1,5 @@
+use godot::classes::{Image, ResourceLoader, Texture2D};
 use godot::prelude::*;
-use image::GenericImageView;
 use ksni::blocking::TrayMethods;
 use ksni::menu::*;
 use std::sync::mpsc::{Sender, channel};
@@ -438,40 +438,124 @@ impl TrayIcon {
         state.icon_theme_path = path.to_string();
     }
 
+    /// Sets the tray icon from a Godot Image resource.
+    ///
+    /// # Parameters
+    /// * `image` - A Godot Image resource
+    ///
+    /// # Returns
+    /// `true` if the icon was set successfully, `false` otherwise
+    ///
+    /// # Example (GDScript)
+    /// ```gdscript
+    /// var texture = load("res://icon.png")
+    /// var image = texture.get_image()
+    /// tray_icon.set_icon_from_image(image)
+    /// ```
     #[func]
-    fn set_icon_from_file(&mut self, path: GString) -> bool {
-        let path_str = path.to_string();
+    fn set_icon_from_image(&mut self, image: Gd<Image>) -> bool {
+        // Get image dimensions
+        let width = image.get_width();
+        let height = image.get_height();
 
-        let bytes = match std::fs::read(&path_str) {
-            Ok(b) => b,
-            Err(e) => {
-                godot_error!("Failed to read file {}: {}", path_str, e);
-                return false;
-            }
-        };
+        if width <= 0 || height <= 0 {
+            godot_error!("Invalid image dimensions: {}x{}", width, height);
+            return false;
+        }
 
-        let img = match image::load_from_memory(&bytes) {
-            Ok(img) => img,
-            Err(e) => {
-                godot_error!("Failed to load icon from file {}: {}", path_str, e);
-                return false;
-            }
-        };
+        // Convert to RGBA8 if needed
+        let mut img = image.duplicate().unwrap().cast::<Image>();
+        img.convert(godot::classes::image::Format::RGBA8);
 
-        let (width, height) = img.dimensions();
-        let mut data = img.into_rgba8().into_vec();
-        for pixel in data.chunks_exact_mut(4) {
+        // Get pixel data
+        let data = img.get_data();
+        let bytes: Vec<u8> = data.to_vec();
+
+        if bytes.len() != (width * height * 4) as usize {
+            godot_error!(
+                "Image data size mismatch: expected {}, got {}",
+                width * height * 4,
+                bytes.len()
+            );
+            return false;
+        }
+
+        // Convert RGBA to ARGB for ksni
+        let mut argb_data = bytes.clone();
+        for pixel in argb_data.chunks_exact_mut(4) {
             pixel.rotate_right(1);
         }
 
         let mut state = self.state.lock().unwrap();
         state.icon_pixmap = vec![ksni::Icon {
-            width: width as i32,
-            height: height as i32,
-            data,
+            width,
+            height,
+            data: argb_data,
         }];
         state.icon_name = String::new();
         true
+    }
+
+    /// Sets the tray icon from a Godot Texture2D resource.
+    /// This is the recommended method for most use cases.
+    ///
+    /// Works with exported games because it uses Godot's resource system.
+    ///
+    /// # Parameters
+    /// * `texture` - A Godot Texture2D resource (CompressedTexture2D, ImageTexture, etc.)
+    ///
+    /// # Returns
+    /// `true` if the icon was set successfully, `false` otherwise
+    ///
+    /// # Example (GDScript)
+    /// ```gdscript
+    /// var texture = load("res://icon.png")
+    /// tray_icon.set_icon_from_texture(texture)
+    /// ```
+    #[func]
+    fn set_icon_from_texture(&mut self, texture: Gd<Texture2D>) -> bool {
+        let image = texture.get_image();
+
+        if image.is_none() {
+            godot_error!("Failed to get image from texture");
+            return false;
+        }
+
+        self.set_icon_from_image(image.unwrap())
+    }
+
+    /// Sets the tray icon by loading a texture from a Godot resource path.
+    /// This is a convenience wrapper around set_icon_from_texture().
+    ///
+    /// Works with exported games because it uses ResourceLoader.
+    ///
+    /// # Parameters
+    /// * `path` - A Godot resource path (e.g., "res://icon.png")
+    ///
+    /// # Returns
+    /// `true` if the icon was loaded and set successfully, `false` otherwise
+    ///
+    /// # Example (GDScript)
+    /// ```gdscript
+    /// tray_icon.set_icon_from_path("res://icon.png")
+    /// ```
+    #[func]
+    fn set_icon_from_path(&mut self, path: GString) -> bool {
+        let mut loader = ResourceLoader::singleton();
+        let resource = loader.load(&path);
+
+        if resource.is_none() {
+            godot_error!("Failed to load resource from path: {}", path);
+            return false;
+        }
+
+        let texture = resource.unwrap().try_cast::<Texture2D>();
+        if texture.is_err() {
+            godot_error!("Resource is not a Texture2D: {}", path);
+            return false;
+        }
+
+        self.set_icon_from_texture(texture.unwrap())
     }
 
     #[func]
