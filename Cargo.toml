@@ -1,6 +1,6 @@
 [package]
 name = "godot-ksni"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 authors = ["yuna0x0 <yuna@yuna0x0.com>"]
 license = "MIT"
@@ -17,5 +17,5 @@ default = ["gdextension"]
 gdextension = []
 
 [dependencies]
-godot = "0.4.2"
+godot = { version = "0.4.2", features = ["register-docs"] }
 ksni = { version = "0.3.1", features = ["blocking"] }
