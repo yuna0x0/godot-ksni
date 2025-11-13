@@ -19,7 +19,7 @@ godot-ksni wraps the [iovxw/ksni](https://github.com/iovxw/ksni) Rust library to
 - Support for Godot's resource system (works with exported games)
 - Thread-safe state management
 
-## Platform Support
+## Environment Support
 
 This library currently supports Linux desktop environments that implement the StatusNotifierItem specification, including:
 
@@ -27,6 +27,10 @@ This library currently supports Linux desktop environments that implement the St
 - GNOME (with AppIndicator extension)
 - COSMIC
 - Other freedesktop-compliant environments
+
+## Requirements
+- Godot 4.5 or later
+- Rust and Cargo for compiling the GDExtension
 
 ## Installation
 
@@ -205,30 +209,6 @@ func build_menu():
 
 The `examples/` directory contains the following examples:
 - `tray_example.gd` - Example demonstrating all features (menu items, checkmarks, radio groups, submenus)
-
-## Building from Source
-
-### Requirements
-
-- Rust and Cargo
-- Godot 4.5 or later
-- Linux development headers (dbus, etc.)
-
-### Build Steps
-
-```bash
-# Clone the repository (if not already done)
-git clone https://github.com/yuna0x0/godot-ksni.git
-cd godot-ksni
-
-# Debug build
-cargo build
-
-# Release build (recommended for production)
-cargo build --release
-```
-
-The compiled library will be in `target/debug/libgodot_ksni.so` or `target/release/libgodot_ksni.so`.
 
 ## Troubleshooting
 
