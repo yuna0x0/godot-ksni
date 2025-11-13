@@ -123,68 +123,130 @@ use ksni::menu::*;
 use std::sync::mpsc::{Sender, channel};
 use std::sync::{Arc, Mutex};
 
-enum TrayEvent {
+/// Internal events emitted by the tray icon.
+///
+/// These events are used internally to communicate between the tray icon
+/// and the Godot node, and are converted to Godot signals.
+pub enum TrayEvent {
+    /// A standard menu item was activated.
     MenuActivated(String),
+    /// A checkmark menu item was toggled.
     CheckmarkToggled(String, bool),
+    /// A radio button option was selected.
     RadioSelected(String, usize, String),
 }
 
-struct TrayState {
-    icon_name: String,
-    icon_theme_path: String,
-    icon_pixmap: Vec<ksni::Icon>,
-    title: String,
-    tooltip_title: String,
-    tooltip_subtitle: String,
-    tooltip_icon_name: String,
-    tray_id: String,
-    menu: Vec<MenuItemData>,
-    event_sender: Option<Sender<TrayEvent>>,
+/// Internal state of the tray icon.
+///
+/// This struct holds all the configuration and state for a tray icon,
+/// including its appearance, menu items, and event communication channel.
+pub struct TrayState {
+    /// The name of the icon from the freedesktop icon theme.
+    pub icon_name: String,
+    /// Path to search for custom icon themes.
+    pub icon_theme_path: String,
+    /// Raw icon data as pixmaps.
+    pub icon_pixmap: Vec<ksni::Icon>,
+    /// The title text of the tray icon.
+    pub title: String,
+    /// Title for the tooltip.
+    pub tooltip_title: String,
+    /// Subtitle for the tooltip.
+    pub tooltip_subtitle: String,
+    /// Icon name for the tooltip.
+    pub tooltip_icon_name: String,
+    /// Unique identifier for this tray icon.
+    pub tray_id: String,
+    /// Menu structure containing all menu items.
+    pub menu: Vec<MenuItemData>,
+    /// Channel sender for emitting events to Godot.
+    pub event_sender: Option<Sender<TrayEvent>>,
 }
 
+/// Represents different types of menu items that can be added to the tray menu.
+///
+/// This enum defines all the possible menu item types supported by the tray icon,
+/// including standard items, checkmarks, radio groups, submenus, and separators.
 #[derive(Clone, Debug)]
-enum MenuItemData {
+pub enum MenuItemData {
+    /// A standard clickable menu item.
     Standard {
+        /// Unique identifier for the menu item.
         id: String,
+        /// Display text for the menu item.
         label: String,
+        /// Icon name from the freedesktop icon theme.
         icon_name: String,
+        /// Whether the item can be clicked.
         enabled: bool,
+        /// Whether the item is visible in the menu.
         visible: bool,
     },
+    /// A menu item with a checkmark that can be toggled on/off.
     Checkmark {
+        /// Unique identifier for the checkmark item.
         id: String,
+        /// Display text for the checkmark item.
         label: String,
+        /// Icon name from the freedesktop icon theme.
         icon_name: String,
+        /// Whether the item can be clicked.
         enabled: bool,
+        /// Whether the item is visible in the menu.
         visible: bool,
+        /// Current checked state.
         checked: bool,
     },
+    /// A group of mutually exclusive radio button options.
     RadioGroup {
+        /// Unique identifier for the radio group.
         id: String,
+        /// Index of the currently selected option.
         selected: usize,
+        /// List of radio button options in this group.
         options: Vec<RadioItemData>,
     },
+    /// A submenu that contains other menu items.
     SubMenu {
+        /// Display text for the submenu.
         label: String,
+        /// Icon name from the freedesktop icon theme.
         icon_name: String,
+        /// Whether the submenu can be opened.
         enabled: bool,
+        /// Whether the submenu is visible in the menu.
         visible: bool,
+        /// List of menu items contained in this submenu.
         submenu: Vec<MenuItemData>,
     },
+    /// A visual separator line in the menu.
     Separator,
 }
 
+/// Data for a single radio button option within a radio group.
+///
+/// Each radio option has its own identifier, label, and visual properties.
 #[derive(Clone, Debug)]
-struct RadioItemData {
-    id: String,
-    label: String,
-    icon_name: String,
-    enabled: bool,
-    visible: bool,
+pub struct RadioItemData {
+    /// Unique identifier for this radio option.
+    pub id: String,
+    /// Display text for this radio option.
+    pub label: String,
+    /// Icon name from the freedesktop icon theme.
+    pub icon_name: String,
+    /// Whether this option can be selected.
+    pub enabled: bool,
+    /// Whether this option is visible in the menu.
+    pub visible: bool,
 }
 
 impl TrayState {
-    fn new(tray_id: String) -> Self {
+    /// Creates a new `TrayState` with default values.
+    ///
+    /// # Parameters
+    ///
+    /// - `tray_id` - Unique identifier for the tray icon
+    pub fn new(tray_id: String) -> Self {
         Self {
             icon_name: "application-x-executable".to_string(),
             icon_theme_path: String::new(),
@@ -199,11 +261,15 @@ impl TrayState {
         }
     }
 
-    fn find_and_toggle_checkmark(&mut self, id: &str) -> Option<bool> {
+    /// Finds a checkmark item by ID and toggles its state.
+    ///
+    /// Returns the new checked state if found, or None if not found.
+    pub fn find_and_toggle_checkmark(&mut self, id: &str) -> Option<bool> {
         Self::find_and_toggle_checkmark_recursive(&mut self.menu, id)
     }
 
-    fn find_and_toggle_checkmark_recursive(
+    /// Recursively searches through menu items to find and toggle a checkmark.
+    pub fn find_and_toggle_checkmark_recursive(
         items: &mut Vec<MenuItemData>,
         id: &str,
     ) -> Option<bool> {
@@ -230,11 +296,15 @@ impl TrayState {
         None
     }
 
-    fn find_and_select_radio(&mut self, group_id: &str, index: usize) -> Option<String> {
+    /// Finds a radio group by ID and selects the option at the given index.
+    ///
+    /// Returns the ID of the selected option if found, or None if not found.
+    pub fn find_and_select_radio(&mut self, group_id: &str, index: usize) -> Option<String> {
         Self::find_and_select_radio_recursive(&mut self.menu, group_id, index)
     }
 
-    fn find_and_select_radio_recursive(
+    /// Recursively searches through menu items to find and select a radio option.
+    pub fn find_and_select_radio_recursive(
         items: &mut Vec<MenuItemData>,
         group_id: &str,
         index: usize,
@@ -264,14 +334,16 @@ impl TrayState {
         None
     }
 
-    fn build_menu_items(&self) -> Vec<MenuItem<KsniTray>> {
+    /// Builds the ksni menu structure from the internal menu data.
+    pub fn build_menu_items(&self) -> Vec<MenuItem<KsniTray>> {
         self.menu
             .iter()
             .map(|item| self.build_menu_item(item))
             .collect()
     }
 
-    fn build_menu_item(&self, item: &MenuItemData) -> MenuItem<KsniTray> {
+    /// Converts a single MenuItemData into a ksni MenuItem.
+    pub fn build_menu_item(&self, item: &MenuItemData) -> MenuItem<KsniTray> {
         match item {
             MenuItemData::Standard {
                 id,
@@ -383,8 +455,14 @@ impl TrayState {
     }
 }
 
-struct KsniTray {
-    state: Arc<Mutex<TrayState>>,
+/// Implementation of the ksni::Tray trait that bridges our internal state
+/// with the ksni library.
+///
+/// This struct wraps the shared tray state and implements all the required
+/// methods for the StatusNotifierItem specification.
+pub struct KsniTray {
+    /// Shared reference to the tray state.
+    pub state: Arc<Mutex<TrayState>>,
 }
 
 impl ksni::Tray for KsniTray {
@@ -511,12 +589,30 @@ impl INode for TrayIcon {
 
 #[godot_api]
 impl TrayIcon {
+    /// Signal emitted when a standard menu item is clicked.
+    ///
+    /// # Parameters
+    ///
+    /// - `id` - The unique identifier of the menu item that was clicked
     #[signal]
     fn menu_activated(id: GString);
 
+    /// Signal emitted when a checkmark menu item is toggled.
+    ///
+    /// # Parameters
+    ///
+    /// - `id` - The unique identifier of the checkmark item
+    /// - `checked` - The new checked state (true if checked, false if unchecked)
     #[signal]
     fn checkmark_toggled(id: GString, checked: bool);
 
+    /// Signal emitted when a radio button option is selected.
+    ///
+    /// # Parameters
+    ///
+    /// - `group_id` - The unique identifier of the radio group
+    /// - `index` - The index of the selected option (0-based)
+    /// - `option_id` - The unique identifier of the selected option
     #[signal]
     fn radio_selected(group_id: GString, index: i64, option_id: GString);
 
@@ -727,6 +823,26 @@ impl TrayIcon {
         self.set_icon_from_texture(texture.unwrap())
     }
 
+    /// Sets the tray icon from raw RGBA pixel data.
+    ///
+    /// The data should be in RGBA format with 4 bytes per pixel.
+    ///
+    /// # Parameters
+    ///
+    /// - `width` - Width of the icon in pixels
+    /// - `height` - Height of the icon in pixels
+    /// - `data` - Raw pixel data as RGBA bytes (length must be width * height * 4)
+    ///
+    /// # Returns
+    ///
+    /// Returns `true` if the icon was set successfully, `false` if the data size is invalid.
+    ///
+    /// # Example (GDScript)
+    /// ```gdscript
+    /// var data = PackedByteArray()
+    /// # Fill data with RGBA values...
+    /// tray_icon.set_icon_from_data(32, 32, data)
+    /// ```
     #[func]
     fn set_icon_from_data(&mut self, width: i32, height: i32, data: PackedByteArray) -> bool {
         let bytes: Vec<u8> = data.to_vec();
@@ -751,6 +867,10 @@ impl TrayIcon {
         true
     }
 
+    /// Clears the custom icon pixmap data.
+    ///
+    /// After calling this, the tray will fall back to using the icon name set by
+    /// `set_icon_name()` if one was specified.
     #[func]
     fn clear_icon_pixmap(&mut self) {
         let mut state = self.state.lock().unwrap();
