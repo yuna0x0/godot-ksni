@@ -464,7 +464,6 @@ impl INode for TrayIcon {
                         "checkmark_toggled",
                         &[Variant::from(id), Variant::from(checked)],
                     );
-                    self.update_tray();
                 }
                 TrayEvent::RadioSelected(group_id, index, option_id) => {
                     self.base_mut().emit_signal(
@@ -475,7 +474,6 @@ impl INode for TrayIcon {
                             Variant::from(option_id),
                         ],
                     );
-                    self.update_tray();
                 }
             }
         }
@@ -537,17 +535,6 @@ impl TrayIcon {
                 godot_error!("Failed to spawn tray: {}", e);
                 false
             }
-        }
-    }
-
-    /// Updates the tray icon to reflect changes made to its state.
-    ///
-    /// This method is automatically called when checkmarks or radio buttons are toggled.
-    /// Manual calls are rarely needed.
-    #[func]
-    fn update_tray(&mut self) {
-        if let Some(handle) = &self.handle {
-            handle.update(|_tray: &mut KsniTray| {});
         }
     }
 
