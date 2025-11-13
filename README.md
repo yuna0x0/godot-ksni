@@ -68,9 +68,9 @@ cargo build --release
 │   ├── project.godot
 │   └── ...
 └── godot-ksni
-    ├── Cargo.lock
     ├── Cargo.toml
     ├── src
+    ├── target
     └── ...
 ```
 

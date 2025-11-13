@@ -16,11 +16,40 @@
 //! Use this method if you want to add godot-ksni as a separate GDExtension to your Godot project.
 //!
 //! 1. Add godot-ksni as a git submodule or clone to your project
+//!    ```bash
+//!    git submodule add https://github.com/yuna0x0/godot-ksni.git
+//!    git submodule update --init --recursive
+//!
+//!    # Or clone directly
+//!    git clone https://github.com/yuna0x0/godot-ksni.git
+//!    ```
+//!
 //! 2. Build the library with default features (includes `gdextension` feature):
 //!    ```bash
-//!    cd godot-ksni && cargo build --release
+//!    cd godot-ksni
+//!
+//!    # For debug build
+//!    cargo build
+//!
+//!    # For release build
+//!    cargo build --release
 //!    ```
-//! 3. Create a `GodotKsni.gdextension` file in your Godot project directory:
+//!
+//! 3. Assuming your project structure is like this:
+//!    ```
+//!    .
+//!    ├── godot
+//!    │   ├── GodotKsni.gdextension
+//!    │   ├── project.godot
+//!    │   └── ...
+//!    └── godot-ksni
+//!        ├── Cargo.toml
+//!        ├── src
+//!        ├── target
+//!        └── ...
+//!    ```
+//!
+//! 4. Create a `GodotKsni.gdextension` file in your Godot project directory:
 //!    ```gdextension
 //!    [configuration]
 //!    entry_symbol = "gdext_rust_init"
@@ -32,7 +61,7 @@
 //!    linux.release.x86_64 = "res://../godot-ksni/target/release/libgodot_ksni.so"
 //!    ```
 //!
-//! 4. The `TrayIcon` node will be available in your Godot project
+//! 5. The `TrayIcon` node will be available in your Godot project
 //!
 //! ### Method 2: As a Rust Dependency (for GDExtension developers)
 //!
