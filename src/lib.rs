@@ -36,7 +36,7 @@
 //!    ```
 //!
 //! 3. Assuming your project structure is like this:
-//!    ```
+//!    ```text
 //!    .
 //!    ├── godot
 //!    │   ├── GodotKsni.gdextension
@@ -509,6 +509,10 @@ impl INode for TrayIcon {
     }
 }
 
+/// Implementation of TrayIcon methods.
+///
+/// This block contains all the public methods for configuring and controlling the system tray icon,
+/// including setting icons, titles, tooltips, and managing menu items.
 #[godot_api]
 impl TrayIcon {
     #[signal]

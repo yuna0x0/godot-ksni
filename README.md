@@ -61,7 +61,7 @@ cargo build --release
 ```
 
 3. Assuming your project structure is like this:
-```
+```text
 .
 ├── godot
 │   ├── GodotKsni.gdextension
